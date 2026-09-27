@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - claude/optimistic-mccarthy-j7547l
   workflow_dispatch:
 
 permissions:
