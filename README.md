@@ -15,6 +15,10 @@ Then open http://localhost:8000 in Chrome, click **Share your audio**, pick a wi
 
 To stop, use the browser's own **Stop sharing** control. The app goes back to the **Share your audio** button.
 
+## Live site
+
+Every push to this branch (or `main`) is deployed to GitHub Pages at https://takecare.github.io/browseraudioinput/ by `.github/workflows/pages.yml`. GitHub Pages is served over HTTPS, so screen and audio capture work there just as they do on `localhost`.
+
 ## Requirements
 
 - Chrome 141+ (Brave and Edge should work too, but haven't been tested yet)
