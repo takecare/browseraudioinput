@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sound Visualiser</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="visualiser"></canvas>
+
+  <div id="prompt" class="overlay">
+    <h1>Sound Visualiser</h1>
+    <p class="hint">
+      Pick a window or screen, then tick <strong>“Share system audio”</strong> in the picker.
+      Your audio keeps playing as normal.
+    </p>
+    <button id="share-button" type="button">Share your audio</button>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
