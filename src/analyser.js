@@ -13,7 +13,16 @@ export function setUpAnalyser(audioContext, source) {
   const frequencyData = new Uint8Array(analyser.frequencyBinCount); // fftSize / 2
   const waveformData = new Uint8Array(analyser.fftSize);
 
-  return { analyser, frequencyData, waveformData, sampleRate: audioContext.sampleRate };
+  return {
+    analyser,
+    frequencyData,
+    waveformData,
+    audio: {
+      sampleRate: audioContext.sampleRate,
+      fftSize: analyser.fftSize,
+      binCount: analyser.frequencyBinCount,
+    },
+  };
 }
 
 export function readFrame({ analyser, frequencyData, waveformData }) {

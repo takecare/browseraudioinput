@@ -75,6 +75,42 @@ body {
   cursor: default;
 }
 
+.toolbar {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem 0.4rem 0.9rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  background: rgba(24, 27, 36, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  transition: opacity 0.4s ease;
+}
+
+.toolbar.idle {
+  opacity: 0;
+}
+
+.toolbar select {
+  padding: 0.3rem 0.5rem;
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.toolbar select option {
+  color: #000;
+}
+
 .status {
   min-height: 1.5em;
   max-width: 32rem;

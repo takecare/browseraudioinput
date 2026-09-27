@@ -33,5 +33,11 @@ Every push to this branch (or `main`) is deployed to GitHub Pages at https://tak
 | `style.css` | Minimal layout and styling |
 | `src/capture.js` | Permission check, `getDisplayMedia()`, and the audio track lifecycle |
 | `src/analyser.js` | `AnalyserNode` setup (FFT size 2048) and per-frame reads |
-| `src/renderer.js` | Canvas 2D bar visualiser with log-spaced frequency bars |
+| `src/renderer.js` | Render loop: canvas sizing and animation frames; hands each frame to the selected visualiser |
+| `src/picker.js` | Visualiser picker in the toolbar; remembers the last choice |
 | `src/main.js` | Connects the modules and owns app state (prompt, running, ended, and re-prompt) |
+| `visualisers/` | The visualisers themselves, the `Visualiser` base class (`base.js`) and the registry (`index.js`) |
+
+## Writing your own visualiser
+
+See [`visualisers/README.md`](visualisers/README.md). In short, extend `Visualiser`, implement `draw(frame)`, and add your class to `visualisers/index.js`. It then appears in the picker.
