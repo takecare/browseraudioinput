@@ -6,7 +6,7 @@
 //   draw(frame)               once per animation frame
 //   destroy()                 when another visualiser is picked or capture stops
 //
-// The renderer wraps every draw() in ctx.save()/ctx.restore(), so canvas state
+// The renderer wraps every resize() and draw() in ctx.save()/ctx.restore(), so canvas state
 // (transforms, fillStyle, globalAlpha...) never leaks between visualisers.
 export class Visualiser {
   // Unique, URL-safe identifier. Also used to remember the user's choice.
@@ -39,7 +39,7 @@ export class Visualiser {
    *   frequencyData: Uint8Array, // binCount magnitudes, 0–255, low → high frequency
    *   waveformData: Uint8Array,  // fftSize samples, 0–255, 128 = silence
    *   time: number,              // ms timestamp from requestAnimationFrame
-   *   deltaTime: number,         // ms since the previous frame
+   *   deltaTime: number,         // ms since the previous frame, capped at 100
    * }} frame
    */
   draw(frame) {

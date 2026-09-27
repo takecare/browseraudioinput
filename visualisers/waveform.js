@@ -18,11 +18,6 @@ export class WaveformVisualiser extends Visualiser {
     ctx.fillStyle = BACKGROUND;
     ctx.fillRect(0, 0, width, height);
 
-    ctx.lineWidth = 2 * dpr;
-    ctx.strokeStyle = '#7fd4ff';
-    ctx.shadowColor = '#5b8cff';
-    ctx.shadowBlur = 12 * dpr;
-
     ctx.beginPath();
     const step = width / (waveformData.length - 1);
     for (let i = 0; i < waveformData.length; i++) {
@@ -30,6 +25,15 @@ export class WaveformVisualiser extends Visualiser {
       if (i === 0) ctx.moveTo(0, y);
       else ctx.lineTo(i * step, y);
     }
+
+    // A wide faint stroke under a thin bright one reads as a glow, and is far
+    // cheaper than shadowBlur.
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(91, 140, 255, 0.3)';
+    ctx.lineWidth = 8 * dpr;
+    ctx.stroke();
+    ctx.strokeStyle = '#7fd4ff';
+    ctx.lineWidth = 2 * dpr;
     ctx.stroke();
   }
 }

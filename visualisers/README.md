@@ -75,7 +75,7 @@ The site has no build step, so the browser can't list the files in this folder. 
 | `frequencyData` | `Uint8Array` of `binCount` (1024) magnitudes, 0–255, from low to high frequency. Bins are linearly spaced: bin `i` covers roughly `i * sampleRate / fftSize` Hz. |
 | `waveformData` | `Uint8Array` of `fftSize` (2048) samples, 0–255, where 128 is silence |
 | `time` | Timestamp in milliseconds from `requestAnimationFrame` |
-| `deltaTime` | Milliseconds since the previous frame. Use it to animate at the same speed on 60 Hz and 120 Hz displays. |
+| `deltaTime` | Milliseconds since the previous frame, capped at 100. Use it to animate at the same speed on 60 Hz and 120 Hz displays. |
 
 ### Helpers in `base.js`
 
@@ -84,7 +84,7 @@ The site has no build step, so the browser can't list the files in this folder. 
 
 ### Rules of thumb
 
-- Each `draw` call is wrapped in `ctx.save()` / `ctx.restore()`, so you can change transforms, styles or `globalAlpha` freely without affecting the next frame or the next visualiser.
-- You don't have to clear the canvas every frame. Painting a semi-transparent background instead leaves trails (see `waveform.js`).
-- Don't allocate large arrays in `draw`, because it runs 60–120 times a second. Precompute in the constructor or in `resize`.
+- Each `resize` and `draw` call is wrapped in `ctx.save()` / `ctx.restore()`, so you can change transforms, styles or `globalAlpha` freely without affecting the next frame or the next visualiser.
+- You don't have to clear the canvas every frame. Painting a semi-transparent background instead leaves trails (see `waveform.js`, `particles.js` and `starfield.js`).
+- Don't allocate large arrays in `draw`, because it runs 60–120 times a second. Precompute in the constructor or in `resize`. `particles.js` and `starfield.js` show how to keep many moving objects in typed arrays.
 - Never connect anything to `audioContext.destination`. Visualisers only read the audio; the app playing it (Spotify, etc.) already sends it to the speakers.
