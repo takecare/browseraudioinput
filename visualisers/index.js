@@ -2,7 +2,6 @@
 // The first one is the default. To add your own, see visualisers/README.md.
 
 import { AntiGravVisualiser } from './anti-grav.js';
-import { ArcadeRacerVisualiser } from './arcade-racer.js';
 import { BarsVisualiser } from './bars.js';
 import { LedVisualiser } from './led.js';
 import { ParticlesVisualiser } from './particles.js';
@@ -21,6 +20,5 @@ export const visualisers = [
   StarfieldVisualiser,
   WaveformRingVisualiser,
   WaveformVisualiser,
-  ArcadeRacerVisualiser,
   AntiGravVisualiser,
 ];
