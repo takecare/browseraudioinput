@@ -1,8 +1,9 @@
 import { Visualiser, bandLevel, logBands } from './base.js';
 
 // A futuristic anti-gravity racer streaking through deep space. The ship is a
-// small flat-shaded 3D mesh seen from a chase camera. Loudness sets the
-// speed, bass drives the engine glow and hover, and kick drums fire a boost.
+// small 3D mesh seen from a chase camera, drawn as dark faces with glowing
+// neon edges. Loudness sets the speed, bass drives the glow and hover, and
+// kick drums fire a boost.
 
 // Ship mesh, in ship space: x right, y up, z forward (away from the camera).
 const VERTICES = [
@@ -27,36 +28,41 @@ const VERTICES = [
   [0.2, 0.3, 0.35], // 18 canopy right
 ];
 
-const LIVERY = {
-  white: [233, 237, 243],
-  blue: [30, 90, 255],
-  dark: [40, 44, 56],
-  rear: [58, 62, 76],
-  orange: [255, 120, 20],
-  glass: [20, 170, 215],
+// Faces are near-black so they hide the edges behind them; the edges carry the colour.
+const FILL = {
+  hull: [14, 18, 30],
+  spine: [10, 18, 48],
+  under: [6, 8, 14],
+  fin: [30, 8, 28],
+  glass: [8, 30, 40],
+};
+const EDGE = {
+  hull: [60, 220, 255],
+  fin: [255, 60, 200],
+  glass: [190, 250, 255],
 };
 
 // `bias` pushes a face later in the draw order (for details sitting on a surface).
 // `twoSided` faces (thin fins) are never culled.
 const FACES = [
-  { v: [0, 3, 1], colour: LIVERY.white },
-  { v: [0, 1, 4], colour: LIVERY.white },
-  { v: [1, 3, 5, 2], colour: LIVERY.blue },
-  { v: [1, 2, 6, 4], colour: LIVERY.blue },
-  { v: [2, 5, 6], colour: LIVERY.white },
-  { v: [3, 9, 11, 5], colour: LIVERY.white },
-  { v: [4, 6, 12, 10], colour: LIVERY.white },
-  { v: [0, 7, 3], colour: LIVERY.dark },
-  { v: [0, 4, 7], colour: LIVERY.dark },
-  { v: [3, 7, 8, 13, 11, 9], colour: LIVERY.dark },
-  { v: [4, 10, 12, 14, 8, 7], colour: LIVERY.dark },
-  { v: [5, 6, 14, 13], colour: LIVERY.rear },
-  { v: [5, 13, 11], colour: LIVERY.rear },
-  { v: [6, 12, 14], colour: LIVERY.rear },
-  { v: [11, 9, 15], colour: LIVERY.orange, twoSided: true },
-  { v: [12, 10, 16], colour: LIVERY.orange, twoSided: true },
-  { v: [1, 17, 2], colour: LIVERY.glass, bias: 10 },
-  { v: [1, 2, 18], colour: LIVERY.glass, bias: 10 },
+  { v: [0, 3, 1], fill: FILL.hull, edge: EDGE.hull },
+  { v: [0, 1, 4], fill: FILL.hull, edge: EDGE.hull },
+  { v: [1, 3, 5, 2], fill: FILL.spine, edge: EDGE.hull },
+  { v: [1, 2, 6, 4], fill: FILL.spine, edge: EDGE.hull },
+  { v: [2, 5, 6], fill: FILL.hull, edge: EDGE.hull },
+  { v: [3, 9, 11, 5], fill: FILL.hull, edge: EDGE.hull },
+  { v: [4, 6, 12, 10], fill: FILL.hull, edge: EDGE.hull },
+  { v: [0, 7, 3], fill: FILL.under, edge: EDGE.hull },
+  { v: [0, 4, 7], fill: FILL.under, edge: EDGE.hull },
+  { v: [3, 7, 8, 13, 11, 9], fill: FILL.under, edge: EDGE.hull },
+  { v: [4, 10, 12, 14, 8, 7], fill: FILL.under, edge: EDGE.hull },
+  { v: [5, 6, 14, 13], fill: FILL.hull, edge: EDGE.hull },
+  { v: [5, 13, 11], fill: FILL.hull, edge: EDGE.hull },
+  { v: [6, 12, 14], fill: FILL.hull, edge: EDGE.hull },
+  { v: [11, 9, 15], fill: FILL.fin, edge: EDGE.fin, twoSided: true },
+  { v: [12, 10, 16], fill: FILL.fin, edge: EDGE.fin, twoSided: true },
+  { v: [1, 17, 2], fill: FILL.glass, edge: EDGE.glass, bias: 10 },
+  { v: [1, 2, 18], fill: FILL.glass, edge: EDGE.glass, bias: 10 },
 ];
 
 const EXHAUSTS = [[-0.25, 0.06, -1.02], [0.25, 0.06, -1.02]];
@@ -67,6 +73,8 @@ const CAMERA_Y = 2.6;
 const CAMERA_Z = -6.2;
 const CAMERA_PITCH = 0.2; // radians, looking down
 const SHIP_CENTRE = [0, 0.1, 0];
+
+const BLOOM_SCALE = 0.25;
 
 const STAR_COUNT = 450;
 const MIN_Z = 0.02;
@@ -108,6 +116,10 @@ export class AntiGravVisualiser extends Visualiser {
     this.depth = new Float32Array(VERTICES.length);
     this.faceOrder = FACES.map((_, i) => i);
     this.faceDepth = new Float32Array(FACES.length);
+    this.shipCanvas = document.createElement('canvas');
+    this.shipCtx = this.shipCanvas.getContext('2d');
+    this.bloomCanvas = document.createElement('canvas');
+    this.bloomCtx = this.bloomCanvas.getContext('2d');
 
     this.starX = new Float32Array(STAR_COUNT);
     this.starY = new Float32Array(STAR_COUNT);
@@ -145,8 +157,8 @@ export class AntiGravVisualiser extends Visualiser {
     const bg = background.getContext('2d');
 
     const base = bg.createLinearGradient(0, 0, 0, height);
-    base.addColorStop(0, '#05040f');
-    base.addColorStop(1, '#0d0a26');
+    base.addColorStop(0, '#020208');
+    base.addColorStop(1, '#060514');
     bg.fillStyle = base;
     bg.fillRect(0, 0, width, height);
 
@@ -158,13 +170,13 @@ export class AntiGravVisualiser extends Visualiser {
       const r = size * (0.2 + random() * 0.35);
       const hue = [270, 300, 190, 220][i % 4];
       const blob = bg.createRadialGradient(x, y, 0, x, y, r);
-      blob.addColorStop(0, `hsla(${hue}, 80%, 45%, 0.22)`);
-      blob.addColorStop(1, `hsla(${hue}, 80%, 45%, 0)`);
+      blob.addColorStop(0, `hsla(${hue}, 80%, 35%, 0.12)`);
+      blob.addColorStop(1, `hsla(${hue}, 80%, 35%, 0)`);
       bg.fillStyle = blob;
       bg.fillRect(0, 0, width, height);
     }
 
-    bg.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    bg.fillStyle = 'rgba(255, 255, 255, 0.35)';
     for (let i = 0; i < 220; i++) {
       const r = (0.3 + random() * 0.8) * dpr;
       bg.fillRect(random() * width, random() * height, r, r);
@@ -188,7 +200,6 @@ export class AntiGravVisualiser extends Visualiser {
     // Looking down shifts the vanishing point of the stars above the centre.
     this.drawStars(cx, cy - Math.tan(CAMERA_PITCH) * focal, dt);
     this.drawShip(cx, cy, focal);
-    this.drawHud();
   }
 
   update(frequencyData, waveformData, time, dt) {
@@ -252,7 +263,7 @@ export class AntiGravVisualiser extends Visualiser {
       }
 
       const closeness = 1 - z;
-      ctx.strokeStyle = `hsla(${this.starHue[i]}, 80%, ${65 + this.loudness * 25}%, ${closeness})`;
+      ctx.strokeStyle = `hsla(${this.starHue[i]}, 70%, ${45 + this.loudness * 25}%, ${closeness * 0.8})`;
       ctx.lineWidth = (0.5 + closeness * 2.2) * dpr;
       ctx.beginPath();
       ctx.moveTo(x0, y0);
@@ -310,6 +321,34 @@ export class AntiGravVisualiser extends Visualiser {
 
     this.drawExhaustPlumes(cx, cy, focal);
 
+    // The ship is drawn into a small offscreen canvas around it, then copied
+    // back twice more blurred for a bloom glow. Blurring only this region
+    // keeps it cheap.
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i < VERTICES.length; i++) {
+      minX = Math.min(minX, screenX[i]);
+      maxX = Math.max(maxX, screenX[i]);
+      minY = Math.min(minY, screenY[i]);
+      maxY = Math.max(maxY, screenY[i]);
+    }
+    const pad = 40 * this.dpr;
+    const left = Math.floor(minX - pad);
+    const top = Math.floor(minY - pad);
+    const boxWidth = Math.ceil(maxX - minX + pad * 2);
+    const boxHeight = Math.ceil(maxY - minY + pad * 2);
+    const shipCanvas = this.shipCanvas;
+    if (shipCanvas.width < boxWidth || shipCanvas.height < boxHeight) {
+      shipCanvas.width = Math.max(shipCanvas.width, boxWidth);
+      shipCanvas.height = Math.max(shipCanvas.height, boxHeight);
+    }
+    const shipCtx = this.shipCtx;
+    shipCtx.clearRect(0, 0, shipCanvas.width, shipCanvas.height);
+    shipCtx.save();
+    shipCtx.translate(-left, -top);
+    shipCtx.lineJoin = 'round';
+    shipCtx.lineCap = 'round';
+    const glow = 0.65 + this.bassSmooth * 0.35 + this.boost * 0.3;
+
     for (const f of this.faceOrder) {
       const face = FACES[f];
       const [a, b, c] = face.v;
@@ -332,21 +371,48 @@ export class AntiGravVisualiser extends Visualiser {
       const facing = normal[0] * mx + normal[1] * my + normal[2] * mz;
       if (facing > 0 && !face.twoSided) continue;
 
+      // Subtle shading keeps the dark faces readable as surfaces.
       const lightDot = normal[0] * LIGHT[0] + normal[1] * LIGHT[1] + normal[2] * LIGHT[2];
-      const shade = 0.35 + 0.8 * Math.max(0, face.twoSided ? Math.abs(lightDot) : lightDot);
-      const [r, g, bl] = face.colour;
-      ctx.fillStyle = `rgb(${Math.min(255, r * shade)}, ${Math.min(255, g * shade)}, ${Math.min(255, bl * shade)})`;
-      ctx.strokeStyle = ctx.fillStyle; // hides hairline gaps between faces
-      ctx.lineWidth = 1;
-      ctx.lineJoin = 'round';
+      const shade = 0.6 + 0.8 * Math.max(0, face.twoSided ? Math.abs(lightDot) : lightDot);
+      const [r, g, bl] = face.fill;
+      const [er, eg, eb] = face.edge;
 
-      ctx.beginPath();
-      ctx.moveTo(screenX[face.v[0]], screenY[face.v[0]]);
-      for (let k = 1; k < face.v.length; k++) ctx.lineTo(screenX[face.v[k]], screenY[face.v[k]]);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      shipCtx.beginPath();
+      shipCtx.moveTo(screenX[face.v[0]], screenY[face.v[0]]);
+      for (let k = 1; k < face.v.length; k++) shipCtx.lineTo(screenX[face.v[k]], screenY[face.v[k]]);
+      shipCtx.closePath();
+      shipCtx.fillStyle = `rgb(${r * shade}, ${g * shade}, ${bl * shade})`;
+      shipCtx.fill();
+      shipCtx.strokeStyle = `rgba(${er}, ${eg}, ${eb}, ${Math.min(1, glow)})`;
+      shipCtx.lineWidth = 1.6 * this.dpr;
+      shipCtx.stroke();
     }
+    shipCtx.restore();
+
+    const sourceWidth = Math.min(boxWidth, shipCanvas.width);
+    const sourceHeight = Math.min(boxHeight, shipCanvas.height);
+    ctx.drawImage(shipCanvas, 0, 0, sourceWidth, sourceHeight, left, top, sourceWidth, sourceHeight);
+
+    // Bloom: blur a quarter-resolution copy (16× fewer pixels to blur) and
+    // scale it back up additively. A tight and a wide pass make the glow.
+    const bloomWidth = Math.ceil(sourceWidth * BLOOM_SCALE);
+    const bloomHeight = Math.ceil(sourceHeight * BLOOM_SCALE);
+    const bloomCanvas = this.bloomCanvas;
+    if (bloomCanvas.width < bloomWidth || bloomCanvas.height < bloomHeight) {
+      bloomCanvas.width = Math.max(bloomCanvas.width, bloomWidth);
+      bloomCanvas.height = Math.max(bloomCanvas.height, bloomHeight);
+    }
+    const bloomCtx = this.bloomCtx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const [blur, alpha] of [[4, 1], [14, 0.5 + this.boost * 0.4]]) {
+      bloomCtx.clearRect(0, 0, bloomCanvas.width, bloomCanvas.height);
+      bloomCtx.filter = `blur(${blur * this.dpr * BLOOM_SCALE}px)`;
+      bloomCtx.drawImage(shipCanvas, 0, 0, sourceWidth, sourceHeight, 0, 0, bloomWidth, bloomHeight);
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(bloomCanvas, 0, 0, bloomWidth, bloomHeight, left, top, sourceWidth, sourceHeight);
+    }
+    ctx.restore();
 
     this.drawExhaustGlow(cx, cy, focal);
   }
@@ -399,54 +465,5 @@ export class AntiGravVisualiser extends Visualiser {
       ctx.fillRect(x - r, y - r, r * 2, r * 2);
     }
     ctx.restore();
-  }
-
-  drawHud() {
-    const { ctx, width, height } = this;
-    const s = Math.min(width, height) / 600;
-    const margin = 26 * s;
-    const speedFraction = Math.min(1, (this.speed - BASE_SPEED) / (LOUDNESS_SPEED * 1.4));
-    const kmh = Math.round(420 + speedFraction * 560);
-
-    ctx.textBaseline = 'alphabetic';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(220, 235, 255, 0.75)';
-    ctx.font = `600 ${11 * s}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
-    ctx.letterSpacing = `${3 * s}px`;
-    ctx.fillText('SPEED', margin, height - margin - 52 * s);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `italic 300 ${38 * s}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
-    ctx.letterSpacing = `${1 * s}px`;
-    ctx.fillText(String(kmh), margin, height - margin - 16 * s);
-    const digitsWidth = ctx.measureText(String(kmh)).width;
-    ctx.font = `600 ${11 * s}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
-    ctx.fillStyle = 'rgba(220, 235, 255, 0.75)';
-    ctx.fillText('KM/H', margin + digitsWidth + 8 * s, height - margin - 16 * s);
-
-    // Thrust bar: slanted segments, cyan to magenta.
-    const segments = 24;
-    const segmentWidth = 9 * s;
-    const segmentHeight = 8 * s;
-    const slant = 4 * s;
-    const lit = Math.round(speedFraction * segments);
-    const y = height - margin;
-    for (let i = 0; i < segments; i++) {
-      const x = margin + i * (segmentWidth + 3 * s);
-      ctx.fillStyle = i < lit ? `hsl(${190 + (i / segments) * 120}, 100%, 60%)` : 'rgba(255, 255, 255, 0.12)';
-      ctx.beginPath();
-      ctx.moveTo(x + slant, y - segmentHeight);
-      ctx.lineTo(x + slant + segmentWidth, y - segmentHeight);
-      ctx.lineTo(x + segmentWidth, y);
-      ctx.lineTo(x, y);
-      ctx.fill();
-    }
-
-    if (this.boost > 0.05) {
-      ctx.fillStyle = `rgba(255, 60, 200, ${this.boost})`;
-      ctx.font = `italic 700 ${16 * s}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
-      ctx.letterSpacing = `${6 * s}px`;
-      ctx.fillText('BOOST', margin, height - margin - 78 * s);
-    }
   }
 }
